@@ -30,6 +30,40 @@ const SeaFlow = new function() {
   };
 
   /**
+   * The SeaFlow dictionnary
+   * @type {Object}
+   */
+  this.dictionnary = {
+    /**
+     * The default configuration for databases
+     * @type {Object}
+     */
+    DBConfig: {
+      "gz-compression": false,
+      "autoflush": true,
+      "reserveKeywords": []
+    },
+
+    /**
+     * The reserved names for tables names and keys
+     * @type {Array.String}
+     */
+    reservedNames: [
+      "__defineGetter__",
+      "__defineSetter__",
+      "__lookupGetter__",
+      "__lookupSetter__",
+      "constructor",
+      "hasOwnProperty",
+      "isPrototypeOf",
+      "propertyIsEnumerable",
+      "toLocaleString",
+      "toString",
+      "valueOf"
+    ]
+  };
+
+  /**
    * Create a new DataBase
    * @param {string} 
    * @return SeaDB
