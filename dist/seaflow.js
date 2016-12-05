@@ -81,6 +81,67 @@ const SeaFlow = new function () {
     let tables = {};
 
     /**
+     * Create a table
+     * @param {string} name
+     * @param {Array.Object} keys
+     * @returns {bool|OError} True for success
+     */
+    this.createTable = (name, keys) => {
+      /**
+       * A temporary variable to store errors
+       * @type {void|OError}
+       */
+      let err;
+
+      // Check arguments
+      if (typeof name !== 'string' || !name.length)
+        return new OError('Table name must be a not-empty string', -1);
+
+      if (Array.isArray(name))
+        return new OError('An array is expected as the keys', -2);
+
+      // Check if the table's name is reserved
+      if (that.dictionnary.reservedNames.includes(name))
+        return new OError('This name is a reserved keyword', -3);
+
+      // Check if the table's name is valid
+      if (!that.dictionnary.regexp.name.exec(name))
+        return new OError('Invalid table name', -12);
+
+      // Check if the table's name is already used
+      if (tables.hasOwnProperty(name))
+        return new OError('A table with this name already exists', -4);
+
+      // Check keys
+      if ((err = that.meta.checkKeyset(keys, config.minimalKeySize, config.maximalKeySize)) !== true)
+        return err;
+
+      // -> Create the new table
+      // Define a new property into the `tables` object and assign the new keys
+      // The 'JSON way' is used here for better performances (see the .export() function for more explanations)
+      tables[name] = {
+        keys: JSON.parse(JSON.stringify(keys)),
+        data: []
+      };
+
+      // TODO: Return a <SeaTable> instance to use the table
+    };
+
+    /**
+     * Check if a table exists
+     * @param {string} name
+     * @returns {boolean|OError}
+     */
+    this.hasTable = (name) => {
+      // Check argument
+      if (typeof name !== 'string' || !name.length)
+        return new OError('Table name must be a not-empty string', -1);
+
+      // Return the result
+      return tables.hasOwnProperty(name);
+    };
+
+    /**
      * Export the database
      * @returns {Object}
      */
