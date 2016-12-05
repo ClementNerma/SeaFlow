@@ -135,13 +135,14 @@ const SeaFlow = new function () {
         minSize = that.dictionnary.DBConfig.minimalKeySize;
       else // Else, check its value
         if (typeof minSize !== 'number' || minSize < 0 || Math.floor(minSize) !== minSize)
-          return new OError('Minimal size must be a positive integer', -14);
+          return new OError('Minimal key size must be a positive integer', -14);
 
       // If the `maxSize` argument was not given...
       if (typeof maxSize !== 'number' || maxSize < 0 || Math.floor(maxSize) !== maxSize)
         maxSize = that.dictionnary.DBConfig.maximalKeySize;
       else // Else, check its value
-        return new OError('Maximal size must be a positive integer', -15);
+        if (typeof maxSize !== 'number' || maxSize < 0 || Math.floor(maxSize) !== maxSize)
+          return new OError('Maximal key size must be a positive integer', -15);
 
       // Check if the keys list is empty
       if (!keys.length)
