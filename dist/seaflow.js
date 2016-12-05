@@ -125,7 +125,9 @@ const SeaFlow = new function () {
     DBConfig: {
       "gz-compression": false,
       "autoflush": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "minimalKeySize": 2,
+      "maximalKeySize": 32
     },
 
     /**
@@ -144,7 +146,29 @@ const SeaFlow = new function () {
       "toLocaleString",
       "toString",
       "valueOf"
-    ]
+    ],
+
+    /**
+     * The list of all supported types
+     * @type {Array.string}
+     */
+    types: [
+      'text',
+      'number',
+      'boolean',
+      'integer',
+      'time',
+      'date'
+    ],
+
+    /**
+     * A set of RegExp to check a lot of things
+     * @type {Object.<string, RegExp>}
+     */
+    regexp: {
+      // Check if a table or key name is valid
+      name: /^[a-zA-Z_][a-zA-Z0-9_]*$/
+    }
   };
 
   /**
