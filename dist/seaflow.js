@@ -124,7 +124,22 @@ const SeaFlow = new function () {
         data: []
       };
 
-      // TODO: Return a <SeaTable> instance to use the table
+      return this.getTable(name);
+    };
+    
+    /**
+     * Get a table
+     * @param {string} name
+     * @returns {OError|SeaTable}
+     */
+    this.getTable = (name) => {
+      // Check the argument
+      if (typeof name !== 'string' || !name.length)
+        return new OError('Table name must be a not-empty string', -1);
+
+      // Check if the chosen table exists...
+      if (!tables.hasOwnProperty(name))
+        return new OError(`The "${name}" table does not exist`, -18);
     };
 
     /**
@@ -172,6 +187,16 @@ const SeaFlow = new function () {
       // Return the cloned object
       return db;
     };
+  };
+
+  /**
+   * The tables interfacing class
+   * @class
+   * @constructor
+   * @param {SeaDB} owner The DataBase which owns this table
+   */
+  this.SeaTable = (owner) => {
+    // TODO: Some stuff here...
   };
 
   /**
