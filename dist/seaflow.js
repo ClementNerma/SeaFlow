@@ -143,6 +143,10 @@ const SeaFlow = new function () {
       else // Else, check its value
         return new OError('Maximal size must be a positive integer', -15);
 
+      // Check if the keys list is empty
+      if (!keys.length)
+        return new OError('At least one key is needed for tables', -17);
+
       /**
        * The list of all key names
        * @type {Array.string}
