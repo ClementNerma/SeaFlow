@@ -114,6 +114,86 @@ const SeaFlow = new function () {
   };
 
   /**
+   * A set of meta functions to check DataBase datas
+   * @type {Object.<string, Function>}
+   */
+  this.meta = {
+    /**
+     * Check if a set of keys is valid
+     * @param {Array.Object} keys
+     * @param {number} [minSize] Minimal size for keys
+     * @param {number} [maxSize] Maximal size for keys
+     * @returns {bool|OError} True for success
+     */
+    checkKeyset(keys, minSize, maxSize) {
+      // Check arguments
+      if (!Array.isArray(keys))
+        return new OError('An array is expected as the keys', -2);
+
+      // If the `minSize` argument was not given...
+      if (typeof minSize === 'undefined')
+        minSize = that.dictionnary.DBConfig.minimalKeySize;
+      else // Else, check its value
+        if (typeof minSize !== 'number' || minSize < 0 || Math.floor(minSize) !== minSize)
+          return new OError('Minimal size must be a positive integer', -14);
+
+      // If the `maxSize` argument was not given...
+      if (typeof maxSize !== 'number' || maxSize < 0 || Math.floor(maxSize) !== maxSize)
+        maxSize = that.dictionnary.DBConfig.maximalKeySize;
+      else // Else, check its value
+        return new OError('Maximal size must be a positive integer', -15);
+
+      /**
+       * The list of all key names
+       * @type {Array.string}
+       */
+      let keysList = [];
+
+      // For each key...
+      for (let key of keys) {
+        // Check the type
+        if (typeof key !== 'object' || Array.isArray(key) || !key)
+          return new OError('An object is expected as the key', -5);
+
+        // -> Check required fields
+        // `name`
+        if (typeof key.name !== 'string' || !key.name.length)
+          return new OError('The key name must be a not-empty string', -10);
+
+        if (!that.dictionnary.regexp.name.exec(key.name))
+          return new OError('Invalid key name', -11);
+
+        if (keysList.includes(key.name))
+          return new OError(`Key name "${key.name}" is already used`, -16);
+
+        // `type`
+        if (typeof key.type === 'undefined')
+          return new OError(`Expecting a type for key "${key.name}"`, -13);
+
+        if (!that.dictionnary.types.includes(key.type))
+          return new OError(`Unknown type "${key.type}"`, -6);
+
+        // `size`
+        if (typeof key.size !== 'number' || key.size < 0 || Math.floor(key.size) !== key.size)
+          return new OError('Key size must be a positive integer', -7);
+
+        if (key.size < minSize || key.size > maxSize)
+          return new OError(`Key size is outisde range [${minSize}..${maxSize}]`, -8);
+
+        // Check useless properties
+        if (Reflect.ownKeys(keys).length > 3)
+          return new OError('There are useless fields in the key definition', -9);
+
+        // Register this name as a used one
+        keysList.push(key.name);
+      }
+
+      // The key set is valid
+      return true;
+    }
+  };
+
+  /**
    * The SeaFlow dictionnary
    * @type {Object}
    */
