@@ -7,6 +7,39 @@
 "use strict";
 
 /**
+ * SeaFlow error class
+ * @class
+ * @param {Object}
+ */
+// This particular syntax is needed to make the class a constant
+const OError = (function () {
+  /**
+   * Ace Error class
+   * @class
+   */
+  class OError extends Error {
+    /**
+     * The class' constructor
+     * @constructor
+     * @param {string} message The error message
+     * @returns {OError}
+     */
+    constructor(message) {
+      // Run the native Error class' constructor
+      // This function also defines the `this` constant
+      super();
+      // Set the error's name...
+      this.name = 'OError';
+      // ...and its message
+      this.message = message;
+    }
+  }
+
+  // Return the class
+  return OError;
+})();
+
+/**
  * The SeaFlow library
  * @class
  * @classdesc Manage all databases and instanciate them from the disk
