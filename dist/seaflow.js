@@ -22,16 +22,17 @@ const OError = (function () {
      * The class' constructor
      * @constructor
      * @param {string} message The error message
+     * @param {number} code The error code
      * @returns {OError}
      */
-    constructor(message) {
+    constructor(message, code) {
       // Run the native Error class' constructor
       // This function also defines the `this` constant
       super();
       // Set the error's name...
       this.name = 'OError';
       // ...and its message
-      this.message = message;
+      this.message = (typeof code === 'number' ? '(Code: ' + code + ') ' + message : message);
     }
   }
 
