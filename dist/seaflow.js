@@ -12,12 +12,20 @@
  * @classdesc Manage all databases and instanciate them from the disk
  * @constructor
  */
-const SeaFlow = new function() {
+const SeaFlow = new function () {
   /**
    * Does the current environment supports Node.js
    * @type {boolean}
+   * @private
    */
-  const is_node = (typeof process !== 'undefined' && typeof require !== 'undefined');
+  const is_node = (typeof process !== "undefined" && typeof require !== "undefined");
+
+  /**
+   * A reference to the 'this' object to be accessed into the 'SeaDB' class
+   * @type {SeaFlow}
+   * @private
+   */
+  const that = this;
 
   /**
    * The DataBase interfacing class
@@ -25,8 +33,50 @@ const SeaFlow = new function() {
    * @classdesc Manage an SeaFlow DataBase
    * @constructor
    */
-  const SeaDB = function() {
-    // TODO: Do some stuff here...
+  const SeaDB = function () {
+    /**
+     * The database's configuration
+     * @type {Object}
+     */
+    let config = Object.assign({}, that.dictionnary.DBConfig);
+
+    /**
+     * The database's tables
+     * @type {Object}
+     */
+    let tables = {};
+
+    /**
+     * Export the database
+     * @returns {Object}
+     */
+    this.export = () => {
+      // Make the export model
+      let db = {
+        config: Object.assign({}, config),
+        tables: {}
+      };
+
+      // For each table...
+      for (let table of Reflect.ownKeys(tables)) {
+        // Define a new property in the `db` object
+        // Clone the `keys` field with the 'JSON way' because it's faster enough with small amount of data
+        // NOTE: We need to use a clone because deep arguments can be given to filters for example
+        db.tables[table] = {
+          keys: JSON.parse(JSON.stringify(tables[table].keys)),
+          data: []
+        };
+        // For each row in the data...
+        for (let row of tables[table].data)
+        // Clone and push it to the `db` object
+        // There are no deep elements other than plain contents (numbers, strings, booleans...) in each row, so we can
+        // use the .slice() function to clone the array
+          db.tables[table].data.push(row.slice() /* Clone the array by slicing 0 element */ );
+      }
+
+      // Return the cloned object
+      return db;
+    };
   };
 
   /**
@@ -41,7 +91,7 @@ const SeaFlow = new function() {
     DBConfig: {
       "gz-compression": false,
       "autoflush": true,
-      "reserveKeywords": []
+      "encoding": "utf-8"
     },
 
     /**
