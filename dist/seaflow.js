@@ -16,6 +16,8 @@ const OError = (function () {
   /**
    * Ace Error class
    * @class
+   * @classdesc Custom error class, implementing the native Error methods
+   * @private
    */
   class OError extends Error {
     /**
@@ -64,8 +66,9 @@ const SeaFlow = new function () {
   /**
    * The DataBase interfacing class
    * @class
-   * @classdesc Manage an SeaFlow DataBase
+   * @private
    * @constructor
+   * @classdesc Manage an SeaFlow DataBase
    */
   const SeaDB = function () {
     /**
@@ -140,6 +143,9 @@ const SeaFlow = new function () {
       // Check if the chosen table exists...
       if (!tables.hasOwnProperty(name))
         return new OError(`The "${name}" table does not exist`, -18);
+
+      // Return a new <SeaTable> instance
+      return new SeaTable(this, name, tables[name]);
     };
 
     /**
@@ -192,10 +198,14 @@ const SeaFlow = new function () {
   /**
    * The tables interfacing class
    * @class
+   * @private
    * @constructor
    * @param {SeaDB} owner The DataBase which owns this table
+   * @param {string} name The table's name
+   * @param {Object} table The table itself (tables['...'])
+   * @param {string} 
    */
-  this.SeaTable = (owner) => {
+  const SeaTable = function(owner, name, table) {
     // TODO: Some stuff here...
   };
 
