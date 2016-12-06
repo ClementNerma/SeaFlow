@@ -392,6 +392,12 @@ const SeaFlow = new function () {
      * @returns {boolea} Also returns 'false' in case of error
      */
     this.hasKey = (name) => keyNames.includes(name);
+
+    /**
+     * Get all key names
+     * @returns {Array}
+     */
+    this.__defineGetter__('$keys', () => keyNames.slice());
   };
 
   /**
