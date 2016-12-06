@@ -166,6 +166,34 @@ const SeaFlow = new function () {
     };
 
     /**
+     * Delete a table
+     * @param {string} name
+     * @returns {boolean|OError} True for success
+     */
+    this.deleteTable = (name) => {
+      // Check the argument
+      if (typeof name !== 'string' || !name.length)
+        return new OError('Table name must be a not-empty string', -1);
+
+      // Check if the chosen table exists
+      if (!tables.hasOwnProperty(name))
+        return new OError(`The "${name}" table does not exist`, -18);
+
+      // If the table is cached (if it was get at least one time)
+      if (tablesCache.hasOwnProperty(name)) {
+        // Destroy the instance
+        tablesCache[name].__destroy();
+        // Remove the instance from the cache
+        delete tablesCache[name];
+      }
+
+      // Remove the table from the database
+      delete tables[name];
+      // Success
+      return true;
+    };
+
+    /**
      * Check if a table exists
      * @param {string} name
      * @returns {boolean|OError}
@@ -252,6 +280,19 @@ const SeaFlow = new function () {
     for (let key of keys)
       // Push its name into the list
       keyNames.push(key.name);
+
+    /**
+     * Destroy the instance (reserved to the <SeaDB> class)
+     * @returns {void}
+     */
+    this.__destroy = () => {
+      // Remove all properties from this instance
+      for (let key of Reflect.ownKeys(this))
+        delete this[key];
+
+      // Delete internal variables to free memory
+      keys = data = keyNames = null;
+    };
     
     /**
      * Insert a new row. See examples to know syntax
