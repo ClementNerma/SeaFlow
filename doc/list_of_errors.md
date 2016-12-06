@@ -22,3 +22,8 @@ Here is the list of all errors used by the SeaFlow engine.
 | -16 | Key name is already used |
 | -17 | At least one key is needed for tables |
 | -18 | The table does not exist
+| -19 | A valid object is expected for the .insert() function |
+| -20 | Unknown key at insertion |
+| -21 | Too many data given at insertion |
+| -22 | Expecting a string, number or boolean value for key |
+| -23 | Invalid value given for key |

@@ -206,7 +206,133 @@ const SeaFlow = new function () {
    * @param {string} 
    */
   const SeaTable = function(owner, name, table) {
-    // TODO: Some stuff here...
+    // The class' inside can access the three properties `owner`, `name` and `table` given by the database
+    // This table instance is not available anymore when the table is deleted (matches with a signal sent by the
+    // owner <SeaDB> instance)
+    
+    /**
+     * All table's keys
+     * @type {Object}
+     * @private
+     */
+    let keys = table.keys;
+
+    /**
+     * All data contained in the table
+     * @type {Array}
+     * @private
+     */
+    let data = table.data;
+
+    /**
+     * The list of all key names
+     * @type {Array.string}
+     * @private
+     */
+    let keyNames = [];
+
+    // For each key...
+    for (let key of keys)
+      // Push its name into the list
+      keyNames.push(key.name);
+    
+    /**
+     * Insert a new row. See examples to know syntax
+     * @example table.insert({ key1: 'value', key2: 'value' })
+     * @example table.insert([ 'value', 'value' ])
+     * @example table.insert('value', 'value')
+     * @returns {boolean|OError} True for success
+     */
+    this.insert = (...call) => {
+      // If many arguments were provided...
+      if (call.length > 1)
+        // Join them into one single array
+        // Call the function with `[ 'value', 'value' ]` is exactly the same than using `'value', 'value'` as them
+        call = [call];
+
+      // Get only the first argument
+      // NOTE: At this step, there is only ONE element in the array because if there were multiple arguments it was
+      //       reduced in the previous `if` block
+      call = call[0];
+
+      // First, check the argument
+      if (typeof call !== 'object' || !call)
+        return new OError('A valid object is expected for the .insert() function', -19);
+
+      // Now the goal is to get one single array which contains all values to insert, in the right order
+      // So: if an object was provided...
+      if (!Array.isArray(call)) {
+        // Make a new object that will contain the final fields
+        let put = new Array(keys.length);
+        
+        // For each given key...
+        for (let key of Reflect.ownKeys(call)) {
+          // Get the key's index in the table's declaration
+          let index = keyNames.indexOf(key);
+
+          // If the table doesn't have this key...
+          if (index === -1)
+            return new OError(`Unknown key "${key}" at insertion`, -20);
+
+          // Push the value into the `put` array
+          put[index] = call[key];
+        }
+
+        // Put the data into the `call` object that will be used to insert the data
+        call = put;
+        // Remove the useless `put` variable to free memory
+        put = null;
+      }
+
+      // Now, the `call` variable is an array that contains all the values to insert, in the right order
+      // If there's too many values in it...
+      if (call.length > keys.length)
+        return new OError(`${call.length} data were given at insertion, but there are only ${keys.length} keys in the table`, -21);
+
+      // For each given value...
+      for (let i = 0; i < call.length; i++) {
+        // Get the key that matches with this data index
+        let key = keys[i];
+        // Get the data to insert
+        let value = call[i];
+        // Check if the value has a valid format, else convert it to a valid one
+        if (typeof value === 'number' || typeof value === 'boolean')
+          value = value.toString();
+        else if(typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') // Invalid value
+          return new OError(`Expecting a string, number or boolean value for key "${key.name}"`, -22);
+        
+        // Get the type's checker
+        let checker = that.dictionnary.regexp['type_' + key.type];
+        // Check if the value does not match with the expected type
+        if (typeof checker === 'function' ? !checker(value) /* Function */ : !checker.exec(value) /* RegExp */)
+          return new OError(`Invalid value given for key "${key.name}", expected type is "${key.type}"`, -23);
+
+        // Get a value that matches with the expected format (special cases)
+        if (key.type === 'boolean')
+          value = (value === 'true');
+        else if(key.type === 'number')
+          value = parseFloat(value); // Floating number
+        else if(key.type === 'integer')
+          value = parseInt(value); // Integer number
+      }
+
+      // Push the value into the data collection
+      data.push(call);
+    };
+
+    /**
+     * Get a key's index
+     * @param {string} name The key's name
+     * @returns {number} -1 is returned in case of error
+     */
+    this.getKeyIndex = (name) => keyNames.indexOf(name);
+
+    /**
+     * Check if a key exists in the table
+     * @param {string} name The key's name
+     * @returns {boolea} Also returns 'false' in case of error
+     */
+    this.hasKey = (name) => keyNames.includes(name);
   };
 
   /**
@@ -348,7 +474,15 @@ const SeaFlow = new function () {
      */
     regexp: {
       // Check if a table or key name is valid
-      name: /^[a-zA-Z_][a-zA-Z0-9_]*$/
+      name: /^[a-zA-Z_][a-zA-Z0-9_]*$/,
+      // Check if a content matches with a specific type
+      type_text: /^.*$/,
+      type_number: /^\d+(\.\d+)?$/,
+      type_boolean: /^true|false$/,
+      type_integer: /^[0-9]+$/,
+      type_time: /^(?:([01]?\d|2[0-3]):([0-5]?\d):)?([0-5]?\d)$/,
+      // Date only supports '/' or '-' separator. For now it allows bad dates such as '32-05-2016'
+      type_date: /^[[0-9]{2}[\/|\-]{1}[0-9]{2}[\/|\-]{1}[0-9]{4}$/
     }
   };
 
