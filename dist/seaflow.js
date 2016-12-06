@@ -74,14 +74,23 @@ const SeaFlow = new function () {
     /**
      * The database's configuration
      * @type {Object}
+     * @private
      */
     let config = Object.assign({}, that.dictionnary.DBConfig);
 
     /**
      * The database's tables
-     * @type {Object}
+     * @type {Object.<string, Object>}
+     * @private
      */
     let tables = {};
+
+    /**
+     * The <SeaTable> instances cache
+     * @type {Object.<string, SeaTable>}
+     * @private
+     */
+    let tablesCache = {};
 
     /**
      * Create a table
@@ -140,12 +149,20 @@ const SeaFlow = new function () {
       if (typeof name !== 'string' || !name.length)
         return new OError('Table name must be a not-empty string', -1);
 
-      // Check if the chosen table exists...
+      // Check if the chosen table exists
       if (!tables.hasOwnProperty(name))
         return new OError(`The "${name}" table does not exist`, -18);
 
-      // Return a new <SeaTable> instance
-      return new SeaTable(this, name, tables[name]);
+      // If the <SeaTable> instance isn't cached...
+      if (!tablesCache.hasOwnProperty(name))
+        // Instanciate the <SeaTable> class and cache it
+        // This way permit to initialize table instances (which takes a bit time and use memory) only when the table
+        // is needed by the application. Also, it permit to use only one instance per table, that avoid to have to
+        // construct a communication channel between the <SeaTable> instances whenever a table is modified or removed.
+        tablesCache[name] = new SeaTable(this, name, tables[name]);
+
+      // Return the instance
+      return tablesCache[name];
     };
 
     /**
@@ -238,6 +255,7 @@ const SeaFlow = new function () {
     
     /**
      * Insert a new row. See examples to know syntax
+     * @param {Object|Array|...*}
      * @example table.insert({ key1: 'value', key2: 'value' })
      * @example table.insert([ 'value', 'value' ])
      * @example table.insert('value', 'value')
