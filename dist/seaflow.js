@@ -282,7 +282,7 @@ const SeaFlow = new function () {
           return new OError(`Key size is outisde range [${minSize}..${maxSize}]`, -8);
 
         // Check useless properties
-        if (Reflect.ownKeys(keys).length > 3)
+        if (Reflect.ownKeys(key).length > 3)
           return new OError('There are useless fields in the key definition', -9);
 
         // Register this name as a used one
