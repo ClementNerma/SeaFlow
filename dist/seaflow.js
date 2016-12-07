@@ -208,15 +208,42 @@ const SeaFlow = new function () {
     };
 
     /**
-     * Export the database
-     * @returns {Object}
+     * Export the database or a single table
+     * @param {string} [table] Export a single table instead of the entire database
+     * @returns {Object|OError} Error can only occures when a single table is exported (for bad argument)
      */
-    this.export = () => {
+    this.export = (table) => {
       // Make the export model
       let db = {
         config: Object.assign({}, config),
         tables: {}
       };
+
+      // If the export targets a specific table...
+      if (typeof table !== 'undefined') {
+        // Check the argument
+        if (typeof table !== 'string' || !table.length)
+          return new OError('Table name must be a not-empty string', -1);
+
+        // Check if the chosen table exists
+        if (!tables.hasOwnProperty(table))
+          return new OError(`The "${table}" table does not exist`, -18);
+
+        // Detailled explanations of this code are written below, in the `for` loop
+        // Make a new object with the table's keys
+        let ret = {
+          keys: JSON.parse(JSON.stringify(tables[table].keys)),
+          data: []
+        };
+
+        // For each row in the table...
+        for (let row of tables[table].data)
+          // Push the row to the `ret` object
+          ret.data.push(row.slice());
+
+        // Return the table
+        return ret;
+      }
 
       // For each table...
       for (let table of Reflect.ownKeys(tables)) {
@@ -392,6 +419,40 @@ const SeaFlow = new function () {
      * @returns {boolea} Also returns 'false' in case of error
      */
     this.hasKey = (name) => keyNames.includes(name);
+
+    /**
+     * Export this table
+     * @param {boolean} [constructKeys] Returns only data with constructed indexes
+     * @returns {Object|Array}
+     */
+    this.export = (constructKeys = false) => {
+      // If keys have to be constructed...
+      if (constructKeys) {
+        // -> Construct them
+        // Make the array that will be returned
+        let obj = [];
+
+        // For each row of data...
+        for (let row of data) {
+          // Make the object that will contain the built row
+          let built = {};
+          
+          // For each value in the row...
+          for (let i = 0; i < row.length; i++)
+            // Add the value to the built object
+            built[keyNames[i]] = row[i];
+
+          // Push the built object to the final array
+          obj.push(built);
+        }
+
+        // Return the built data array
+        return obj;
+      }
+
+      // Else, return the exported table
+      return owner.export(name);
+    };
 
     /**
      * Get all key names

@@ -27,3 +27,5 @@ Here is the list of all errors used by the SeaFlow engine.
 | -21 | Too many data given at insertion |
 | -22 | Expecting a string, number or boolean value for key |
 | -23 | Invalid value given for key |
+| -24 | Data must be an array |
+| -25 | Keyset must be an array |
