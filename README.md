@@ -50,7 +50,7 @@ table.insert(3, 'jonas', 'N0tAR0b0t', 'jonas.robot@gmail.com');
 table.insert(4, 'jonas', 'N0tAR0b0t', 'first-jonas.robot@gmail.com');
 
 // Perform some sample queries
-table.get({ keys: ['username', 'email'], order: ['username:ASC', 'email:DESC'] }); // Display all users' and email, sorted
+table.get({ keys: ['username', 'email'], order: ['username:ASC', 'email:DESC'] }); // Display all users' name and email, sorted
 ```
 
 # Documentation

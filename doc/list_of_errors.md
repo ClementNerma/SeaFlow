@@ -2,8 +2,8 @@
 
 Here is the list of all errors used by the SeaFlow engine.
 
-|  No | Description |
-|=====|=============|
+| No  | Description |
+|-----|-------------|
 |  -1 | Table name must be a not-empty string |
 |  -2 | An array is expected as the keys |
 |  -3 | This name is a reserved keyword |
