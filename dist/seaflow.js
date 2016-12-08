@@ -1046,7 +1046,7 @@ const SeaFlow = new function () {
       "autoflush": true,
       "encoding": "utf-8",
       "minimalKeySize": 2,
-      "maximalKeySize": 512
+      "maximalKeySize": 131072 // (128 Kb)
     },
 
     /**
