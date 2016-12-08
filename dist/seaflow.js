@@ -1142,3 +1142,7 @@ const SeaFlow = new function () {
     return new SeaDB();
   };
 };
+
+// Node.js support
+if (typeof module === 'object' && module /* Avoid 'null' value */)
+  module.exports = SeaFlow;
