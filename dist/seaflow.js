@@ -257,11 +257,9 @@ const SeaFlow = new function () {
           keys: JSON.parse(JSON.stringify(tables[table].keys)),
           data: []
         };
+
         // For each row in the data...
         for (let row of tables[table].data)
-        // Clone and push it to the `db` object
-        // There are no deep elements other than plain contents (numbers, strings, booleans...) in each row, so we can
-        // use the .slice() function to clone the array
           db.tables[table].data.push(row.slice() /* Clone the array by slicing 0 element */ );
       }
 
@@ -283,7 +281,7 @@ const SeaFlow = new function () {
   const SeaTable = function(owner, name, table) {
     // The class' inside can access the three properties `owner`, `name` and `table` given by the database
     // This table instance is not available anymore when the table is deleted (matches with a signal sent by the
-    // owner <SeaDB> instance)
+    // owner <SeaDB> instance, using the .__destroy() function - see its declaration above -)
     
     /**
      * All table's keys
@@ -680,6 +678,12 @@ const SeaFlow = new function () {
           value = parseFloat(value); // Floating number
         else if(key.type === 'integer')
           value = parseInt(value); // Integer number
+
+        // If the key is set as unique...
+        if (key.unique)
+          // Check if a row contains the same value for this property
+          if (data.some((el, index) => el[i] === value))
+            return new OError(`Duplicate value: Key "${key.name}" is unique, but value "${value}" was inserted two times`, -9);
       }
 
       // Push the value into the data collection
@@ -866,9 +870,9 @@ const SeaFlow = new function () {
         if (key.size < minSize || key.size > maxSize)
           return new OError(`Key size is outisde range [${minSize}..${maxSize}]`, -8);
 
-        // Check useless properties
-        if (Reflect.ownKeys(key).length > 3)
-          return new OError('There are useless fields in the key definition', -9);
+        // `unique` doesn't have any check because it can be any value
+        if (typeof key.unique !== 'undefined')
+          key.unique = !!key.unique;
 
         // Register this name as a used one
         keysList.push(key.name);
@@ -1138,7 +1142,6 @@ const SeaFlow = new function () {
 
   /**
    * Create a new DataBase
-   * @param {string} 
    * @return SeaDB
    */
   this.createDatabase = () => {

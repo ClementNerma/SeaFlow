@@ -12,7 +12,7 @@ Here is the list of all errors used by the SeaFlow engine.
 |  -6 | Unknown type |
 |  -7 | Key size must be a positive integer |
 |  -8 | Key size is outisde range |
-|  -9 | There are useless fields in the key definition |
+|  -9 | Duplicate value: Key is unique, but value was inserted two times |
 | -10 | The key name must be a not-empty string |
 | -11 | Invalid key name |
 | -12 | Invalid table name |
