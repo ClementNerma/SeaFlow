@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file The SeaFlow library
  * @author Clément Nerma
  * @license CC-BY-NC-ND-4.0
@@ -33,8 +33,11 @@ const OError = (function () {
       super();
       // Set the error's name...
       this.name = 'OError';
-      // ...and its message
+      // ...its message...
       this.message = (typeof code === 'number' ? '(Code: ' + code + ') ' + message : message);
+      // ...and also its code (if given)
+      if (code)
+        this.errcode = code;
     }
   }
 
