@@ -249,7 +249,7 @@ const SeaFlow = new function () {
       for (let table of Reflect.ownKeys(tables)) {
         // Define a new property in the `db` object
         // Clone the `keys` field with the 'JSON way' because it's faster enough with small amount of data
-        // NOTE: We need to use a clone because deep arguments can be given to filters for example
+        // NOTE: The usage of a clone is needed because deep arguments can be given to filters for example
         db.tables[table] = {
           keys: JSON.parse(JSON.stringify(tables[table].keys)),
           data: []
@@ -298,7 +298,7 @@ const SeaFlow = new function () {
 
     /**
      * The list of all key names
-     * @type {Array.string}
+     * @type {Array.<string>}
      * @private
      */
     let keyNames = [];
@@ -321,6 +321,278 @@ const SeaFlow = new function () {
       keys = data = keyNames = null;
     };
     
+    /**
+     * Get data from the table
+     * @param {Object} what
+     * @example table.get({ conditions: { firstname: 'John' } })
+     * @example table.get({ keys: ['firstname', 'email'], conditions: [ "firstname^='Jo'", "AND",  "lastname~='N'" ] })
+     * @example table.get({ keys: ['firstname'], order: ['firstname:ASC', 'lastname:DESC'] })
+     * @example table.get({ method: 'first', where: "firstname=='Jo'" })
+     * @example table.get({ method: 'count', limit: 5 })
+     * @returns {Array|Object|OError}
+     */
+    this.get = (what) => {
+      // Check the argument
+      if (typeof what !== 'object' || Array.isArray(what) || !what)
+        return new OError('.get: Argument must be an object', -25);
+
+      // Check the `what` fields
+      // NOTE: All fields can have an `undefined` value if their were not specified
+
+      // : Keys to get      
+      if (typeof what.keys !== 'undefined' && !Array.isArray(what.keys))
+        return new OError('.get: "keys" must be an array', -26);
+        
+      // For each given key...
+      for (let i = 0; i < (what.keys || []).length; i++) {
+        // Check its type
+        if (typeof what.keys[i] !== 'string')
+          return new OError('.get: Each field in "keys" must be a string', -31);
+
+        // Check if the specified key exists
+        if (!keyNames.includes(what.keys[i]))
+          return new OError(`.get: Table doesn't have a "${what.keys[i]}" key`, -30);
+
+        // Check if the key was already specified before in the array...
+        if (what.keys.indexOf(what.keys[i]) !== i)
+          return new OError(`.get: Key "${what.keys[i]}" is specified two times in "keys"`, -32);
+      }
+
+      // : Order
+      // Declare a variable to store the order keys
+      let order = [];
+
+      // If an order was specified...
+      if (typeof what.order !== 'undefined') {
+        // If a string was given...
+        if (typeof what.order === 'string')
+          what.order = [what.order + ':ASC'];
+        else // Else, check if the type is valid
+          if (!Array.isArray(what.order))
+            return new OError('.get: "order" must be a string or an array', -27);
+
+
+        // For each key given in the `order` field...
+        for (let field of what.order) {
+          // Check if it's a string
+          if (typeof field !== 'string')
+            return new OError('.get: Each field in "order" must be a string', -28);
+
+          // Get the position of the ':' symbol (used to separate the key name and the 'ASC' or 'DESC' keyword)
+          let place = field.indexOf(':');
+
+          // If the symbol was not found...
+          if (place === -1) {
+            // The full string is the key name
+            // It uses the 'ASC' method
+            // NOTE: The .indexOf() function is used to store the key's index instead of its name. That permit to sort
+            //       the output data faster because the .indexOf() function's result is prepared here and not into the
+            //       .sort() callback. That permit to save a good time on big data queries.
+            order.push([ keyNames.indexOf(field), true /* ASC */ ]);
+          } else { // Else, the symbol was found            
+            // Check if the method is valid
+            // For that, store the order method in a temporary variable
+            let ASC = field.substr(place + 1);
+            
+            // Check the method
+            if (ASC !== 'ASC' && ASC !== 'DESC')
+              return new OError(`.get: Unsupported "${ASC}" order method, must be "ASC" or "DESC"`, -29);
+
+            // The first part of the string (before the ":" symbol) is the key name
+            order.push([ keyNames.indexOf(field.substr(0, place)), ASC === 'ASC' ]);
+          }
+
+          // Check if the specified key exists
+          if (!keyNames.includes(keyNames[order[order.length - 1][0]]))
+            return new OError(`.get: Table doesn't have a "${keyNames[order[order.length - 1][0]]}" key`, -30);
+        }
+      }
+
+      // : Conditions
+      // Declare an object that will contain the conditions
+      let where = {
+        and: [], // Needed conditions
+        or: [], // Groups of conditions where at least one must be true
+        not: [] // Conditions that must fail
+      };
+
+      // If the `where` field was specified...
+      if (typeof what.where !== 'undefined') {
+        // Build the conditions object
+        where = that.meta.conditionsTree(what.where, keyNames);
+        // If an error was thrown...
+        if (where instanceof OError)
+          // Return it
+          return where;
+      }
+
+      // : Limit
+      // If a limit was specified...
+      if (typeof what.limit !== 'undefined') {
+        // Check its type
+        if (typeof what.limit !== 'number')
+          return new OError('.get: "limit" must be a number', -39);
+
+        // Check its value
+        // NOTE: Even though they're useless, the '0' and '+/- Infinity' values are allowed
+        if (what.limit < 0 || Math.floor(what.limit) !== what.limit)
+          return new OError('.get: Limit must be a positive integer', -40);
+      }
+
+      // : Method
+      // If a method was specified...
+      if (typeof what.method !== 'undefined') {
+        // Check its type
+        if (typeof what.method !== 'string' || !what.method.length)
+          return new OError('.get: "method" must be a string', -41);
+
+        // Check if the specified method is supported
+        if (!that.dictionnary.getMethods.includes(what.method))
+          return new OError(`.get: Unsupported "${what.method}" method`, -42);
+
+        // An order cannot be given with the 'count' method
+        if (order.length && what.method === 'count')
+          return new OError(`.get: The "count" method is incompatible with the "order" field`, -47);
+      }
+
+      // -> Finally, the data's selection can start
+      // First, declare a variable which will contain the output
+      let output = [];
+      // Check if there are conditions to look for
+      let thereAreConditions = (what.where && what.where.length);
+
+      // For each row of data...
+      for (let row of data) {
+        // If the length limit is reached...
+        if (output.length === what.limit)
+          // Stop the selection
+          break ;
+
+        // If there are conditions to look for...
+        if (thereAreConditions) {
+          // Declare local variables
+          // Is there a condition that was not matching with the row ?
+          let unsupported = false;
+          
+          // For each needed condition...
+          for (let cond of where.and)
+            // If the condition doesn't match with the row...
+            if (!this.match(row, cond)) {
+              // Set the `unsupported` variable
+              unsupported = true;
+              // Break the loop
+              break ;
+            }
+
+          // If a condition failed...
+          if (unsupported)
+            // Ignore the row
+            continue ;
+
+          // For each condition that must NOT match with the row...
+          for (let cond of where.not)
+            // If the condition matches with the row...
+            // NOTE: Here the condition is inverted because the row must be ignored if any condition matches with the row
+            if (this.match(row, cond)) {
+              // Set the `unsupported` variable
+              unsupported = true;
+              // Break the loop
+              break ;
+            }
+
+          // If any condition matched with the row...
+          if (unsupported)
+            // Ignore it
+            continue ;
+
+          // Does any group fails to match with the row ?
+          let unmatching = false;
+          
+          // For each 'or' group...
+          for (let group of where.or) {
+            // Does any condition match with the row ?
+            let match = false;
+
+            // For each condition in the group...
+            for (let cond of group)
+              // If the condition matches with the row...
+              if (this.match(row, cond)) {
+                // Set the `match` variable
+                match = true;
+                // Break the loop
+                break ;
+              }
+
+            // If every conditions failed...
+            if (!match) {
+              // Set the `unmatching` variable, to break the `if` block
+              unmatching = true;
+              // Break this loop
+              break ;
+            }
+          }
+
+          // If any group failed to match with the row...
+          if (unmatching)
+            // Ignore the row
+            continue ;
+        }
+
+        // Push the row to the list
+        // The row is cloned to prevent table's modification from outside (without data verification)
+        output.push(row.slice());
+      }
+
+      // Consider chosen the method
+      if (what.method === 'first')
+        output = [output[0]];
+      else if(what.method === 'last')
+        output = [output[output.length - 1]];
+      else if(what.method === 'count')
+        output = output.length;
+
+      // If an order was specified...
+      if (order.length)
+        // Order the output
+        output.sort((a, b) => {
+          // For each given comparative way...
+          for (let comp of order) {
+            // If there is a property higher than the other...
+            if (a[comp[0]] !== b[comp[0]])
+              // Return this result
+              return a[comp[0]] > b[comp[0]] ? (comp[1] ? 1 : -1) : (comp[1] ? -1 : 1);
+            // Else, compare with the next property
+          }
+
+          // If the code reaches this point, all given properties are equals
+          // So the result of the comparison will be arbitrary
+          return 0;
+        });
+
+      // If not all keys are needed...
+      if (what.keys && what.keys.length) {
+        // For each row into the `output` array...
+        for (let i = 0; i < output.length; i++) {
+          // Get the current row
+          let row = output[i];
+          // Make a new variable that will contain the final row
+          let out = [];
+
+          // For each needed key...
+          for (let key of what.keys)
+            // Push the key's value to the `out` array
+            out.push(row[keyNames.indexOf(key)]);
+
+          // Push them to the array
+          // NOTE: Because `out` is an all new array, a clone isn't needed because it's not linked to the `data` one
+          output[i] = out;
+        }
+      }
+
+      // Return the `output` variable
+      return output;
+    };
+
     /**
      * Insert a new row. See examples to know syntax
      * @param {Object|Array|...*}
@@ -388,7 +660,7 @@ const SeaFlow = new function () {
           return new OError(`Expecting a string, number or boolean value for key "${key.name}"`, -22);
         
         // Get the type's checker
-        let checker = that.dictionnary.regexp['type_' + key.type];
+        let checker = that.dictionnary.regexp.types[key.type];
         // Check if the value does not match with the expected type
         if (typeof checker === 'function' ? !checker(value) /* Function */ : !checker.exec(value) /* RegExp */)
           return new OError(`Invalid value given for key "${key.name}", expected type is "${key.type}"`, -23);
@@ -404,6 +676,59 @@ const SeaFlow = new function () {
 
       // Push the value into the data collection
       data.push(call);
+    };
+
+    /**
+     * Check if a row matches with a condition
+     * @param {Array} row The row to check
+     * @param {Object} cond The condition to use
+     * @example table.match([ 'John', 'john.somewhere@domain.com' ], { key: 'username', check: '^=', value: 'Joh' })
+     * @returns {boolean|OError}
+     */
+    this.match = (row, cond) => {
+      // Check the arguments
+      if (!Array.isArray(row))
+        return new OError('Data row must be an array', -43);
+
+      if (typeof cond !== 'object' || Array.isArray(cond) || !cond)
+        return new OError('Condition must be an object', -44);
+
+      // Check if fields are missing in the `cond` object
+      if (typeof cond.key !== 'string' || typeof cond.check !== 'string' || typeof cond.value !== 'string')
+        return new OError('Missing field(s) in the condition object (needs "key", "check" and "value" as strings)', -45);
+
+      // Check if the specified key exists
+      if (!keyNames.includes(cond.key))
+        return new OError(`Table doesn't have a "${key}" key`, -30);
+
+      // NOTE: There are so much more tests to do, like check all data of the row (type, length...) but that would take
+      //       a very long time, so we ignore it. Also, this function is made to be used to be used with a table's
+      //       existing row
+
+      // Get the key's value as a string...
+      let value = row[keyNames.indexOf(cond.key)].toString();
+      // Get the value to compare with
+      let comp = cond.value;
+
+      // If they are quotes...
+      if ((comp.startsWith('"') && comp.endsWith('"')) || (comp.startsWith("'") && comp.endsWith("'")))
+        // Remove them
+        comp = comp.substr(1, comp.length - 2);
+
+      // Check if the condition matches with the row, depending of the comparator
+      switch (cond.check) {
+        case '==': return (value === comp);
+        case '!=': return (value === comp);
+        case '>' : return (value > comp); // Strings comparison works
+        case '<' : return (value < comp);
+        case '>=': return (value >= comp);
+        case '<=': return (value >= comp);
+        case '^=': return value.startsWith(comp);
+        case '$=': return value.endsWith(comp);
+        case '~=': return value.includes(comp);
+        // Unknown comparator
+        default: return new OError(`Unknown comparator "${cond.check}"`, -46);
+      }
     };
 
     /**
@@ -498,7 +823,7 @@ const SeaFlow = new function () {
 
       /**
        * The list of all key names
-       * @type {Array.string}
+       * @type {Array.<string>}
        */
       let keysList = [];
 
@@ -543,6 +868,162 @@ const SeaFlow = new function () {
 
       // The key set is valid
       return true;
+    },
+
+    /**
+     * Check if a string value is valid to be inserted into the database
+     * @param {string} val The string to check
+     * @example ...isValidValue('"hello"')
+     * @example ...isValidValue('2.8')
+     * @example ...isValidValue('true')
+     * @returns {boolean} True if the value is valid, false else
+     */
+    isValidValue(val) {
+      // Check the argument
+      if (typeof val !== 'string')
+        return false;
+
+      // If it's a string, the value is valid
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'")))
+        return true;
+      
+      // Check it it's a number
+      if(!Number.isNaN(parseFloat(val)))
+        return true;
+
+      // Check if it's a boolean
+      if(val === 'true' || val === 'false')
+        return true;
+
+      // Else, it's an invalid value
+      return false;
+    },
+
+    /**
+     * Build a conditions tree
+     * @param {Array.<string>} conditions The list of all conditions
+     * @param {Array.<string>} keys The list of all table's keys
+     * @returns {Object.<string, Array>|OError}
+     */
+    conditionsTree(conditions, keyNames) {
+      // Declare an object that will contain the conditions
+      let where = {
+        and: [], // Needed conditions
+        or: [], // Groups of conditions where at least one must be true
+        not: [] // Conditions that must fail
+      };
+
+      // If a string was given...
+      if (typeof conditions === 'string')
+        conditions = [conditions];
+      else // Else, check if the type is valid
+        if (!Array.isArray(conditions))
+          return new OError('.get: "where" must be a string or an array', -33);
+
+      // If an empty array was given...
+      if (!conditions.length)
+        // Return the empty `where` object
+        return where;
+
+      // Build a RegExp to use in the loop (see comments above)
+      // NOTE: We use the '.' symbol to match any 'comparator' because :
+      //  1. That makes the regex faster than if we put all the possible symbols (/...(\^|\$|\!|...).../)
+      //  2. That permit to display a beautiful error if the symbol is not valid instead of 'Invalid condition'
+      //  3. If an operator is added to the dictionnary's list, the regex will not have to be updated
+      let regex = /^([a-zA-Z][a-zA-Z0-9_]*) *(.=|.) *(.*)$/;
+      // A boolean to know if an join operator (AND, OR...) is expected or not
+      let expectJoin = true;
+      // A string that contains the current operator used
+      let operator = 'AND';
+      // The last operator before the current one. This variable permit to classify the condition in the `where` object
+      let lastOperator = 'AND';
+
+      // For each given condition...
+      for (let cond of conditions) {
+        // Check its type
+        if (typeof cond !== 'string')
+          return new OError('.get: Each field in "where" must be a string', -34);
+
+        // Revert the 'expectJoin' variable
+        expectJoin = !expectJoin;
+
+        // If an operator is expected...
+        if (expectJoin) {
+          // Save the last used operator
+          lastOperator = operator;
+
+          // Check if `expectJoin` is an operator
+          if (!that.dictionnary.joinOperators.includes(cond)) {
+            // Use the 'AND' operator instead
+            operator = 'AND';
+            // Reverse the `expectJoin` boolean (because finally we didn't got an operator)
+            expectJoin = !expectJoin;
+          } else { // Else...
+            // Use the given operator
+            operator = cond;
+            // If the operator is 'OR' and the last is not 'OR'...
+            if (operator === 'OR' && lastOperator !== 'OR') {
+              // Push a new array into the `where.or` one
+              // Also, move the last item from its current place to the last 'OR' array
+              where.or.push([ where[lastOperator.toLocaleLowerCase()].splice(-1)[0] ]);
+            }
+            // Ignore the next instructions that only applies to the conditions
+            continue ;
+          }
+        }
+
+        // Use a regex to match the condition (it's very complicated and slower else)
+        // For that, declare a variable that will contain the match
+        let match;
+        
+        // Run the regex
+        if (!(match = cond.match(regex)))
+          return new OError(`.get: Unsupported condition given "${cond}"`, -35);
+
+        // The regex did the match successfully
+        //  match[1] contains the key name
+        //  match[2] contains the comparator ('^', '=', '!', ...) without the last '=' symbol
+        //  match[3] contains the expected value
+        // Store them into local variables
+        let key = match[1],
+            check = match[2] + (match[2] === '=' ? '=' : ''), // Support for the single "=", which refers to "=="
+            value = match[3];
+
+        // Check if the specified key exists
+        if (!keyNames.includes(key))
+          return new OError(`.get: Table doesn't have a "${key}" key`, -30);
+
+        // Check if the `check` symbol is valid
+        if (!that.dictionnary.checkSymbols.includes(check))
+          return new OError(`.get: Unsupported comparator "${check}" in condition "${cond}"`, -37);
+
+        // Check if the comparative value is valid
+        if (!that.meta.isValidValue(value))
+          return new OError(`.get: Invalid comparative value given "${value}" in condition "${cond}"`, -38);
+
+        // Push the condition to the final list, depending of the last operator
+        switch (operator) {
+          case 'AND':
+            where.and.push({ key, check, value });
+            break;
+
+          case 'OR':
+            where.or[where.or.length - 1].push({ key, check, value });
+            break;
+
+          case 'NOT':
+            where.not.push({ key, check, value });
+            break;
+        }
+      }
+
+      // The conditions chain can't end with an operator
+      // So, if a condition was expected (the boolean is reserved at the beginning of the loop so we inverse it)...
+      if (expectJoin)
+        return new OError('.get: Missing a condition at the end of the "where" field (can\'t stop after an operator)', -36);
+      
+      // Return the built conditions object
+      return where;
     }
   };
 
@@ -565,7 +1046,7 @@ const SeaFlow = new function () {
 
     /**
      * The reserved names for tables names and keys
-     * @type {Array.String}
+     * @type {Array.<string>}
      */
     reservedNames: [
       "__defineGetter__",
@@ -582,35 +1063,70 @@ const SeaFlow = new function () {
     ],
 
     /**
-     * The list of all supported types
-     * @type {Array.string}
+     * The list of all supported 'join operators'
+     * @type {Array.<string>}
      */
-    types: [
-      'text',
-      'number',
-      'boolean',
-      'integer',
-      'time',
-      'date'
+    joinOperators: [
+      'AND',
+      'OR',
+      'NOT'
     ],
 
     /**
-     * A set of RegExp to check a lot of things
+     * The list of all supported comparators
+     * @type {Array.<string>}
+     */
+    checkSymbols: [
+      '^=',
+      '==',
+      '~=',
+      '$=',
+      '!=',
+      '>',
+      '<',
+      '>=',
+      '<='
+    ],
+
+    /**
+     * The list of all methods that can be use in .get()
+     * @type {Array.<string>}
+     */
+    getMethods: [
+      'first',
+      'last',
+      'count'
+    ],
+
+    /**
+     * A set of regex to check a lot of things
      * @type {Object.<string, RegExp>}
      */
     regexp: {
+      /**
+       * A set of regex to check if a content matches with a specific type
+       * @type {Object.<string, RegExp>}
+       */
+      types: {
+        text: /^.*$/,
+        number: /^\d+(\.\d+)?$/,
+        boolean: /^true|false$/,
+        integer: /^[0-9]+$/,
+        time: /^(?:([01]?\d|2[0-3]):([0-5]?\d):)?([0-5]?\d)$/,
+        // Date only supports '/' or '-' separator. For now it allows bad dates such as '32-05-2016'
+        date: /^[[0-9]{2}[\/|\-]{1}[0-9]{2}[\/|\-]{1}[0-9]{4}$/
+      },
+
       // Check if a table or key name is valid
-      name: /^[a-zA-Z_][a-zA-Z0-9_]*$/,
-      // Check if a content matches with a specific type
-      type_text: /^.*$/,
-      type_number: /^\d+(\.\d+)?$/,
-      type_boolean: /^true|false$/,
-      type_integer: /^[0-9]+$/,
-      type_time: /^(?:([01]?\d|2[0-3]):([0-5]?\d):)?([0-5]?\d)$/,
-      // Date only supports '/' or '-' separator. For now it allows bad dates such as '32-05-2016'
-      type_date: /^[[0-9]{2}[\/|\-]{1}[0-9]{2}[\/|\-]{1}[0-9]{4}$/
+      name: /^[a-zA-Z_][a-zA-Z0-9_]*$/
     }
   };
+
+  /**
+   * The list of all supported types
+   * @type {Array.<string>}
+   */
+  this.dictionnary.types = Reflect.ownKeys(this.dictionnary.regexp.types);
 
   /**
    * Create a new DataBase

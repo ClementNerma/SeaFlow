@@ -28,4 +28,26 @@ Here is the list of all errors used by the SeaFlow engine.
 | -22 | Expecting a string, number or boolean value for key |
 | -23 | Invalid value given for key |
 | -24 | Data must be an array |
-| -25 | Keyset must be an array |
+| -25 | .get: Argument must be an object |
+| -26 | .get: "keys" must be an array |
+| -27 | .get: "order" must be a string or an array |
+| -28 | .get: Each field in "order" must be a string |
+| -29 | .get: Unsupported order method, must be "ASC" or "DESC" |
+| -30 | .get: Table doesn't have this key |
+| -31 | .get: Each field in "keys" must be a string |
+| -32 | .get: Key is specified two times in "key" |
+| -33 | .get: "where" must be a string or an array |
+| -34 | .get: Each field in "where" must be a string |
+| -35 | .get: Unsupported condition given |
+| -36 | .get: Missing a condition at the end of the "where" field (can't stop after an operator) |
+| -37 | .get: Unsupported comparator in condition |
+| -38 | .get: Invalid comparative value given in condition |
+| -39 | .get: "limit" must be a number |
+| -40 | .get: Limit must be a positive integer |`
+| -41 | .get: "method" must be a string |
+| -42 | .get: Unsupported method |
+| -43 | Data row must be an array |
+| -44 | Condition must be an object |
+| -45 | Missing field(s) in the condition object (needs "key", "check" and "value" as strings) |
+| -46 | Unknown comparator |
+| -47 | The "count" method is incompatible with the "order" field |
