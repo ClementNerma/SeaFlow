@@ -51,3 +51,4 @@ Here is the list of all errors used by the SeaFlow engine.
 | -45 | Missing field(s) in the condition object (needs "key", "check" and "value" as strings) |
 | -46 | Unknown comparator |
 | -47 | The "count" method is incompatible with the "order" field |
+| -48 | Content is too long for this key |

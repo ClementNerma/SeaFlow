@@ -659,8 +659,13 @@ const SeaFlow = new function () {
         else if(typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') // Invalid value
           return new OError(`Expecting a string, number or boolean value for key "${key.name}"`, -22);
         
+        // Check if the content is much longer than the maximum allowed
+        if (value.length > key.size)
+          return new OError(`Content is too long for key "${key.name}" (${value.length} bytes given, ${key.size} allowed)`, -48);
+
         // Get the type's checker
         let checker = that.dictionnary.regexp.types[key.type];
+
         // Check if the value does not match with the expected type
         if (typeof checker === 'function' ? !checker(value) /* Function */ : !checker.exec(value) /* RegExp */)
           return new OError(`Invalid value given for key "${key.name}", expected type is "${key.type}"`, -23);
