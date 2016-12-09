@@ -666,7 +666,7 @@ const SeaFlow = new function () {
             value = key.default;
 
           // If the `autoincrement` attribute is set on this key...
-          if (key.attributes && key.attributes.includes('autoincrement')) {
+          else if (key.attributes && key.attributes.includes('autoincrement')) {
             // If there is at least one row in the table...
             if (data.length)
               // Use the last value plus one
@@ -674,6 +674,15 @@ const SeaFlow = new function () {
             else // Else...
               value = 1; // Put a first value
           }
+
+          // Else, give the field an arbitrary default value (to avoid `undefined` values in the row)
+          else
+            value = that.dictionnary.typesPrefill[key.type];
+
+          // Set the value into the field
+          // call[i] will possibly be assigned again in the big `if` chain (which contains the parsing functions like parseInt())
+          // but it's faster to make the assignment here because we're sure that `value` was modified and the assignment is needed
+          call[i] = value;
         } else { // If a value was given...
           // Check if the value has a valid format, else convert it to a valid one
           if (typeof value === 'number' || typeof value === 'boolean')
@@ -1194,6 +1203,19 @@ const SeaFlow = new function () {
     keyAttributes: [
       'autoincrement'
     ],
+
+    /**
+     * Default values for types prefilling
+     * @type {Object}
+     */
+    typesPrefill: {
+      text: '',
+      number: 0,
+      boolean: false,
+      integer: 0,
+      time: '0:0:0',
+      date: '01/01/1900'
+    },
 
     /**
      * A set of regex to check a lot of things
