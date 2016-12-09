@@ -660,6 +660,11 @@ const SeaFlow = new function () {
           if (key.required)
             return new OError(`A value is expected for key "${key.name}"`, -49);
 
+          // If a default value was specified...
+          if (key.default)
+            // Set it as the current value
+            call[i] = key.default;
+
           // If the `autoincrement` attribute is set on this key...
           if (key.attributes && key.attributes.includes('autoincrement')) {
             // If there is at least one row in the table...
@@ -907,6 +912,38 @@ const SeaFlow = new function () {
             // If the attribute is not supported...
             if (!that.dictionnary.keyAttributes.includes(attr))
               return new OError(`Unsupported key attribute "${attr}"`, -51);
+        }
+
+        // `default`
+        // If this field was specified...
+        if (typeof key.default !== 'undefined') {
+          // Check its type
+          if (typeof key.default !== 'string' && typeof key.default !== 'number' && typeof key.default !== 'boolean')
+            return new OError(`The "default" field must be a not-empty string, a number or a boolean`, -52);
+          
+          // Get the default value as a string
+          key.default = key.default.toString();
+
+          // Get the key type's checker
+          let checker = that.dictionnary.regexp.types[key.type];
+
+          // Check if the value does not match with the expected type
+          if (typeof checker === 'function' ? !checker(key.default) /* Function */ : !checker.exec(key.default) /* RegExp */)
+            return new OError(`Bad default value given for key "${key.name}", expected type is "${key.type}"`, -53);
+
+          // Check if the content's size is valid
+          if (key.default.length > key.size)
+            return new OError(`Default value is too long for this key (${key.default.length} bytes given, but only ${key.size} are allowed)`, -54);
+
+          // The `unique` and `default` fields make conflicts when no value is specified at insertion (the default value is inserted
+          // as the same multiple times), so check if the `unique` field was specified
+          if (key.unique)
+            return new OError(`The "default" field cannot be used beside the "unique" one`, -55);
+
+          // The `autoincrement` attribute and the `default` fields cannot be used beside because the `autoincrement` gives a default
+          // key's value, so check if this attribute was specified
+          if (key.attributes && key.attributes.includes('autoincrement'))
+            return new OError(`The "default" field cannot be used beside the "autoincrement" attribute`, -56);
         }
 
         // Register this name as a used one

@@ -26,7 +26,7 @@ Here is the list of all errors used by the SeaFlow engine.
 | -20 | Unknown key at insertion |
 | -21 | Too many data given at insertion |
 | -22 | Expecting a string, number or boolean value for key |
-| -23 | Invalid value given for key |
+| -23 | Invalid value given for this key |
 | -24 | Data must be an array |
 | -25 | .get: Argument must be an object |
 | -26 | .get: "keys" must be an array |
@@ -55,3 +55,8 @@ Here is the list of all errors used by the SeaFlow engine.
 | -49 | A value is expected for this key |
 | -50 | The key's attributes list must be an array |
 | -51 | Unsupported key attribute |
+| -52 | The "default" field must be a not-empty string, a number or a boolean |
+| -53 | Bad default value given for this key |
+| -54 | Default value is too long for this key |
+| -55 | The "default" field cannot be used beside the "unique" one |
+| -56 | The "default" field cannot be used beside the "autoincrement" attribute |
