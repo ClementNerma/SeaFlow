@@ -659,6 +659,16 @@ const SeaFlow = new function () {
           // Check if the value is needed
           if (key.required)
             return new OError(`A value is expected for key "${key.name}"`, -49);
+
+          // If the `autoincrement` attribute is set on this key...
+          if (key.attributes && key.attributes.includes('autoincrement')) {
+            // If there is at least one row in the table...
+            if (data.length)
+              // Use the last value plus one
+              call[i] = data[data.length - 1][i] + 1;
+            else // Else...
+              call[i] = 1; // Put a first value
+          }
         } else { // If a value was given...
           // Check if the value has a valid format, else convert it to a valid one
           if (typeof value === 'number' || typeof value === 'boolean')
@@ -880,6 +890,20 @@ const SeaFlow = new function () {
         // `unique` doesn't have any check because it can be any value
         if (typeof key.unique !== 'undefined')
           key.unique = !!key.unique;
+
+        // `attributes`
+        // If this field was specified...
+        if (typeof key.attributes !== 'undefined') {
+          // Check its type
+          if (!Array.isArray(key.attributes))
+            return new OError(`The key's attributes list must be an array`, -50);
+
+          // For all specified attribute...
+          for (let attr of key.attributes)
+            // If the attribute is not supported...
+            if (!that.dictionnary.keyAttributes.includes(attr))
+              return new OError(`Unsupported key attribute "${attr}"`, -51);
+        }
 
         // Register this name as a used one
         keysList.push(key.name);
@@ -1115,6 +1139,14 @@ const SeaFlow = new function () {
       'first',
       'last',
       'count'
+    ],
+
+    /**
+     * The list of all supported key's attributes
+     * @type {Array.<string>}
+     */
+    keyAttributes: [
+      'autoincrement'
     ],
 
     /**

@@ -53,3 +53,5 @@ Here is the list of all errors used by the SeaFlow engine.
 | -47 | The "count" method is incompatible with the "order" field |
 | -48 | Content is too long for this key |
 | -49 | A value is expected for this key |
+| -50 | The key's attributes list must be an array |
+| -51 | Unsupported key attribute |
