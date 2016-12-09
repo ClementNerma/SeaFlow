@@ -60,3 +60,4 @@ Here is the list of all errors used by the SeaFlow engine.
 | -54 | Default value is too long for this key |
 | -55 | The "default" field cannot be used beside the "unique" one |
 | -56 | The "default" field cannot be used beside the "autoincrement" attribute |
+| -57 | The "autoincrement" attribute can only be used with a "number" or "integer"-typed key |

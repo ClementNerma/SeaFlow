@@ -912,6 +912,11 @@ const SeaFlow = new function () {
             // If the attribute is not supported...
             if (!that.dictionnary.keyAttributes.includes(attr))
               return new OError(`Unsupported key attribute "${attr}"`, -51);
+
+          // The `autoincrement` attribute must only be used in a `number` or `integer`-typed key
+          // So, check if this attribute is present with an incompatible key type
+          if (key.attributes.includes('autoincrement') && (key.type !== 'number' && key.type !== 'integer'))
+            return new OError(`The "autoincrement" attribute can only be used with a "number" or "integer"-typed key`, -57);
         }
 
         // `default`
