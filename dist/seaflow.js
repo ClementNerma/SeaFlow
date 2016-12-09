@@ -891,6 +891,10 @@ const SeaFlow = new function () {
         if (typeof key.unique !== 'undefined')
           key.unique = !!key.unique;
 
+        // `required` doesn't have any check because it can be any value
+        if (typeof key.required !== 'undefined')
+          key.required = !!key.required;
+
         // `attributes`
         // If this field was specified...
         if (typeof key.attributes !== 'undefined') {
