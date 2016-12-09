@@ -663,16 +663,16 @@ const SeaFlow = new function () {
           // If a default value was specified...
           if (key.default)
             // Set it as the current value
-            call[i] = key.default;
+            value = key.default;
 
           // If the `autoincrement` attribute is set on this key...
           if (key.attributes && key.attributes.includes('autoincrement')) {
             // If there is at least one row in the table...
             if (data.length)
               // Use the last value plus one
-              call[i] = data[data.length - 1][i] + 1;
+              value = data[data.length - 1][i] + 1;
             else // Else...
-              call[i] = 1; // Put a first value
+              value = 1; // Put a first value
           }
         } else { // If a value was given...
           // Check if the value has a valid format, else convert it to a valid one
@@ -692,20 +692,20 @@ const SeaFlow = new function () {
           if (typeof checker === 'function' ? !checker(value) /* Function */ : !checker.exec(value) /* RegExp */)
             return new OError(`Invalid value given for key "${key.name}", expected type is "${key.type}"`, -23);
 
-          // Get a value that matches with the expected format (special cases)
-          if (key.type === 'boolean')
-            value = (value === 'true');
-          else if(key.type === 'number')
-            value = parseFloat(value); // Floating number
-          else if(key.type === 'integer')
-            value = parseInt(value); // Integer number
-
           // If the key is set as unique...
           if (key.unique)
             // Check if a row contains the same value for this property
             if (data.some((el, index) => el[i] === value))
               return new OError(`Duplicate value: Key "${key.name}" is unique, but value "${value}" was inserted two times`, -9);
         }
+
+        // Get a value that matches with the expected format (special cases)
+        if (key.type === 'boolean')
+          value = (value === 'true');
+        else if(key.type === 'number')
+          value = parseFloat(value); // Floating number
+        else if(key.type === 'integer')
+          value = parseInt(value); // Integer number
       }
 
       // Push the value into the data collection
