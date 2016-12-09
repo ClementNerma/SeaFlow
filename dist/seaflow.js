@@ -654,36 +654,43 @@ const SeaFlow = new function () {
         let key = keys[i];
         // Get the data to insert
         let value = call[i];
-        // Check if the value has a valid format, else convert it to a valid one
-        if (typeof value === 'number' || typeof value === 'boolean')
-          value = value.toString();
-        else if(typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') // Invalid value
-          return new OError(`Expecting a string, number or boolean value for key "${key.name}"`, -22);
-        
-        // Check if the content is much longer than the maximum allowed
-        if (value.length > key.size)
-          return new OError(`Content is too long for key "${key.name}" (${value.length} bytes given, ${key.size} allowed)`, -48);
+         // If no value was given...
+        if (typeof value === 'undefined') {
+          // Check if the value is needed
+          if (key.required)
+            return new OError(`A value is expected for key "${key.name}"`, -49);
+        } else { // If a value was given...
+          // Check if the value has a valid format, else convert it to a valid one
+          if (typeof value === 'number' || typeof value === 'boolean')
+            value = value.toString();
+          else if(typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') // Invalid value
+            return new OError(`Expecting a string, number or boolean value for key "${key.name}"`, -22);
+          
+          // Check if the content is much longer than the maximum allowed
+          if (value.length > key.size)
+            return new OError(`Content is too long for key "${key.name}" (${value.length} bytes given, ${key.size} allowed)`, -48);
 
-        // Get the type's checker
-        let checker = that.dictionnary.regexp.types[key.type];
+          // Get the type's checker
+          let checker = that.dictionnary.regexp.types[key.type];
 
-        // Check if the value does not match with the expected type
-        if (typeof checker === 'function' ? !checker(value) /* Function */ : !checker.exec(value) /* RegExp */)
-          return new OError(`Invalid value given for key "${key.name}", expected type is "${key.type}"`, -23);
+          // Check if the value does not match with the expected type
+          if (typeof checker === 'function' ? !checker(value) /* Function */ : !checker.exec(value) /* RegExp */)
+            return new OError(`Invalid value given for key "${key.name}", expected type is "${key.type}"`, -23);
 
-        // Get a value that matches with the expected format (special cases)
-        if (key.type === 'boolean')
-          value = (value === 'true');
-        else if(key.type === 'number')
-          value = parseFloat(value); // Floating number
-        else if(key.type === 'integer')
-          value = parseInt(value); // Integer number
+          // Get a value that matches with the expected format (special cases)
+          if (key.type === 'boolean')
+            value = (value === 'true');
+          else if(key.type === 'number')
+            value = parseFloat(value); // Floating number
+          else if(key.type === 'integer')
+            value = parseInt(value); // Integer number
 
-        // If the key is set as unique...
-        if (key.unique)
-          // Check if a row contains the same value for this property
-          if (data.some((el, index) => el[i] === value))
-            return new OError(`Duplicate value: Key "${key.name}" is unique, but value "${value}" was inserted two times`, -9);
+          // If the key is set as unique...
+          if (key.unique)
+            // Check if a row contains the same value for this property
+            if (data.some((el, index) => el[i] === value))
+              return new OError(`Duplicate value: Key "${key.name}" is unique, but value "${value}" was inserted two times`, -9);
+        }
       }
 
       // Push the value into the data collection
